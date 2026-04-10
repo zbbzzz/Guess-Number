@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>猜數字遊戲</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      background: #000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      color: #e0e0e0;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #e94560, #0f9b8e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #9ab;
+      margin-bottom: 1.8rem;
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 0.8rem;
+    }
+
+    #guessInput {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      border-radius: 0.75rem;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1.1rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #guessInput:focus { border-color: #e94560; }
+    #guessInput:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Buttons ── */
+    button {
+      padding: 0.7rem 1.2rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    button:active { transform: scale(0.96); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #submitBtn {
+      background: linear-gradient(135deg, #e94560, #c0392b);
+      color: #fff;
+    }
+
+    #restartBtn {
+      background: linear-gradient(135deg, #0f9b8e, #0d7a6e);
+      color: #fff;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    /* ── Validation message ── */
+    #validationMsg {
+      font-size: 0.85rem;
+      color: #f39c12;
+      min-height: 1.2em;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── Feedback ── */
+    #feedbackMsg {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      min-height: 2rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+    }
+    .feedback-big   { color: #e74c3c; }
+    .feedback-small { color: #3498db; }
+    .feedback-win   { color: #2ecc71; font-size: 1.6rem; }
+
+    /* ── Stats grid ── */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 1rem;
+      padding: 0.8rem 1rem;
+      text-align: center;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #9ab;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* ── Progress message ── */
+    #progressMsg {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #f1c40f;
+      min-height: 1.4em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Sections ── */
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ab;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── Guess history ── */
+    #guessList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      min-height: 1.6rem;
+    }
+    .guess-chip {
+      background: rgba(255,255,255,0.1);
+      border-radius: 0.5rem;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.85rem;
+    }
+    .chip-big   { border-left: 3px solid #e74c3c; }
+    .chip-small { border-left: 3px solid #3498db; }
+    .chip-win   { border-left: 3px solid #2ecc71; }
+
+    /* ── Recent games ── */
+    #recentList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .recent-chip {
+      background: rgba(255,255,255,0.08);
+      border-radius: 0.5rem;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.82rem;
+      color: #cde;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>猜數字遊戲</h1>
+    <p class="subtitle">請猜 1 ～ 100 的整數</p>
+
+    <div class="input-row">
+      <input
+        id="guessInput"
+        type="number"
+        min="1"
+        max="100"
+        step="1"
+        placeholder="輸入數字…"
+        autocomplete="off"
+      />
+      <button id="submitBtn">送出猜測</button>
+    </div>
+    <div id="validationMsg"></div>
+
+    <div id="feedbackMsg"></div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">本局次數</div>
+        <div class="stat-value" id="attemptsDisplay">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">歷史最佳</div>
+        <div class="stat-value" id="bestDisplay">—</div>
+      </div>
+    </div>
+
+    <div id="progressMsg"></div>
+
+    <div class="section-title">本局猜測歷史</div>
+    <div id="guessList"></div>
+
+    <div class="section-title">最近 5 局紀錄</div>
+    <div id="recentList"></div>
+
+    <button id="restartBtn" aria-label="再玩一局">🔄 再玩一局</button>
+  </div>
+
+  <script>
+    // ── DOM references ──────────────────────────────────────────────────
+    const guessInput      = document.getElementById('guessInput');
+    const submitBtn       = document.getElementById('submitBtn');
+    const restartBtn      = document.getElementById('restartBtn');
+    const validationMsg   = document.getElementById('validationMsg');
+    const feedbackMsg     = document.getElementById('feedbackMsg');
+    const attemptsDisplay = document.getElementById('attemptsDisplay');
+    const bestDisplay     = document.getElementById('bestDisplay');
+    const progressMsg     = document.getElementById('progressMsg');
+    const guessList       = document.getElementById('guessList');
+    const recentList      = document.getElementById('recentList');
+
+    // ── State ────────────────────────────────────────────────────────────
+    let answer   = 0;
+    let attempts = 0;
+    let guesses  = [];   // { value, result: 'big'|'small'|'win' }
+    let gameOver = false;
+
+    // ── localStorage helpers ─────────────────────────────────────────────
+    const BEST_KEY    = 'guessGame_best';
+    const HISTORY_KEY = 'guessGame_history';
+    const MAX_HISTORY = 5;
+
+    function loadBest() {
+      const v = localStorage.getItem(BEST_KEY);
+      return v !== null ? parseInt(v, 10) : null;
+    }
+
+    function saveBest(n) {
+      localStorage.setItem(BEST_KEY, String(n));
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveHistory(history) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    function initGame() {
+      answer   = Math.floor(Math.random() * 100) + 1;
+      attempts = 0;
+      guesses  = [];
+      gameOver = false;
+
+      guessInput.disabled = false;
+      submitBtn.disabled  = false;
+      guessInput.value    = '';
+
+      validationMsg.textContent  = '';
+      feedbackMsg.textContent    = '';
+      feedbackMsg.className      = '';
+      progressMsg.textContent    = '';
+      attemptsDisplay.textContent = '0';
+      guessList.innerHTML        = '';
+
+      updateBestDisplay();
+      renderRecentGames();
+
+      guessInput.focus();
+    }
+
+    // ── Submit guess ──────────────────────────────────────────────────────
+    function submitGuess() {
+      validationMsg.textContent = '';
+
+      if (gameOver) {
+        validationMsg.textContent = '本局已結束，請重新開始';
+        return;
+      }
+
+      const raw = guessInput.value.trim();
+
+      // VAL-01 / VAL-02 / VAL-03
+      if (raw === '') {
+        validationMsg.textContent = '請輸入 1 到 100 的整數';
+        guessInput.focus();
+        return;
+      }
+
+      // Must be a whole number string (no decimal point)
+      if (!/^-?\d+$/.test(raw)) {
+        validationMsg.textContent = '請輸入 1 到 100 的整數';
+        guessInput.focus();
+        return;
+      }
+
+      const guess = parseInt(raw, 10);
+
+      if (guess < 1 || guess > 100) {
+        validationMsg.textContent = '請輸入 1 到 100 的整數';
+        guessInput.focus();
+        return;
+      }
+
+      // Valid guess — increment counter
+      attempts++;
+      attemptsDisplay.textContent = attempts;
+
+      let result;
+      if (guess > answer) {
+        result = 'big';
+        feedbackMsg.textContent = '大了 🔺';
+        feedbackMsg.className   = 'feedback-big';
+      } else if (guess < answer) {
+        result = 'small';
+        feedbackMsg.textContent = '小了 🔻';
+        feedbackMsg.className   = 'feedback-small';
+      } else {
+        result = 'win';
+        feedbackMsg.textContent = '🎉 恭喜通過！';
+        feedbackMsg.className   = 'feedback-win';
+        endGame();
+      }
+
+      guesses.push({ value: guess, result });
+      renderGuessHistory();
+
+      // auto-select for next input
+      guessInput.select();
+      guessInput.focus();
+    }
+
+    // ── End game ──────────────────────────────────────────────────────────
+    function endGame() {
+      gameOver = true;
+      guessInput.disabled = true;
+      submitBtn.disabled  = true;
+
+      // Update best & history in localStorage
+      let best = loadBest();
+      let history = loadHistory();
+
+      if (best === null || attempts < best) {
+        best = attempts;
+        saveBest(best);
+        progressMsg.textContent = `🏆 新紀錄！本局僅猜了 ${attempts} 次！`;
+      } else {
+        const diff = attempts - best;
+        progressMsg.textContent = diff === 0
+          ? `🎯 平了最佳紀錄（${best} 次）！`
+          : `距離最佳紀錄還差 ${diff} 次（最佳：${best} 次）`;
+      }
+
+      history = [attempts, ...history].slice(0, MAX_HISTORY);
+      saveHistory(history);
+
+      updateBestDisplay();
+      renderRecentGames();
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────
+    function updateBestDisplay() {
+      const best = loadBest();
+      bestDisplay.textContent = best !== null ? String(best) : '—';
+    }
+
+    function renderGuessHistory() {
+      guessList.innerHTML = guesses.map(g => {
+        const cls = g.result === 'big' ? 'chip-big'
+                  : g.result === 'small' ? 'chip-small'
+                  : 'chip-win';
+        return `<span class="guess-chip ${cls}">${g.value}</span>`;
+      }).join('');
+    }
+
+    function renderRecentGames() {
+      const history = loadHistory();
+      if (history.length === 0) {
+        recentList.innerHTML = '<span style="color:#9ab;font-size:0.82rem">尚無紀錄</span>';
+        return;
+      }
+      recentList.innerHTML = history.map((n, i) =>
+        `<span class="recent-chip">#${i + 1}：${n} 次</span>`
+      ).join('');
+    }
+
+    // ── Event listeners ───────────────────────────────────────────────────
+    submitBtn.addEventListener('click', submitGuess);
+    restartBtn.addEventListener('click', initGame);
+
+    guessInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitGuess();
+      }
+    });
+
+    // ── Start ─────────────────────────────────────────────────────────────
+    initGame();
+  </script>
+</body>
+</html>
